@@ -1,0 +1,1 @@
+/home/kernel_dragon/Projects/dotman/configs/vimrc
