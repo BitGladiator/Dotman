@@ -18,6 +18,9 @@ case "$COMMAND" in
   backup)
     backup_dotfiles "$@"
     ;;
+  use-profile)
+    use_profile "$@"
+    ;;
   help|--help|-h|"")
     show_help
     ;;

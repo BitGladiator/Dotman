@@ -75,26 +75,73 @@ backup_dotfiles() {
   log_success "Backup complete at $BACKUP_DIR"
 }
 
-# Install/symlink dotfiles into $HOME
+#Install Dotfiles (Symlink them to $HOME)
 install_dotfiles() {
   log_info "Installing dotfiles..."
 
-  for file in "$PROJECT_ROOT/configs/"*; do
+  # Load the selected profile from the .dotmanrc config file
+  if [ -f "$HOME/.dotmanrc" ]; then
+    source "$HOME/.dotmanrc"
+  fi
+
+  # Default path to configs/ if no profile is selected
+  DOTFILES_PATH="$PROJECT_ROOT/configs"
+
+  # If a profile is set and it's not 'default', use the profile folder
+  if [ -n "$DOTMAN_PROFILE" ] && [ "$DOTMAN_PROFILE" != "default" ]; then
+    PROFILE_PATH="$PROJECT_ROOT/profiles/$DOTMAN_PROFILE"
+    if [ -d "$PROFILE_PATH" ]; then
+      DOTFILES_PATH="$PROFILE_PATH"
+      log_info "Using profile: $DOTMAN_PROFILE"
+    else
+      log_warn "Profile '$DOTMAN_PROFILE' not found. Falling back to 'configs/'"
+    fi
+  fi
+
+  # Loop through all files in the active dotfiles folder
+  for file in "$DOTFILES_PATH"/*; do
+    [ -f "$file" ] || continue  # Skip if not a regular file
+
+    # Prepend a dot to the filename to make it a hidden file (e.g. bashrc -> .bashrc)
     basefile=".$(basename "$file")"
+
+    # Full target path in user's home directory
     target="$HOME/$basefile"
 
-    # If the file already exists, back it up and remove it
+    # If a file or symlink already exists at the target location
     if [ -f "$target" ] || [ -L "$target" ]; then
-      log_info "Backing up existing $basefile"
-      backup_dotfiles
+      # Back it up before replacing
+      backup_dotfiles "$target"
       rm -f "$target"
     fi
 
-    # Create a symbolic link from configs/ to $HOME
+    # Create a symlink from the dotfile source to $HOME
     ln -s "$file" "$target"
-    log_success "Linked $basefile"
+
+    log_success "Linked $basefile -> $(realpath "$file")"
   done
 
-  log_success "All dotfiles installed!"
+  log_success "Dotfiles installed successfully!"
+}
+# Change the active profile
+use_profile() {
+  PROFILE_NAME="$1"
+
+  if [ -z "$PROFILE_NAME" ]; then
+    log_error "Please provide a profile name. Example: use-profile work"
+    return 1
+  fi
+
+  PROFILE_PATH="$PROJECT_ROOT/profiles/$PROFILE_NAME"
+
+  if [ ! -d "$PROFILE_PATH" ]; then
+    log_error "Profile '$PROFILE_NAME' does not exist at $PROFILE_PATH"
+    return 1
+  fi
+
+  # Update ~/.dotmanrc
+  sed -i "s/^DOTMAN_PROFILE=.*/DOTMAN_PROFILE=$PROFILE_NAME/" "$HOME/.dotmanrc"
+
+  log_success "Active profile set to '$PROFILE_NAME'"
 }
 
