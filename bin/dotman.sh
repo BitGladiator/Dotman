@@ -21,6 +21,9 @@ case "$COMMAND" in
   use-profile)
     use_profile "$@"
     ;;
+  list-profiles)
+    list_profiles "$@"
+    ;;
   help|--help|-h|"")
     show_help
     ;;

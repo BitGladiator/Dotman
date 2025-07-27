@@ -144,4 +144,26 @@ use_profile() {
 
   log_success "Active profile set to '$PROFILE_NAME'"
 }
+# List available profiles and highlight the active one
+list_profiles() {
+  # Load active profile from .dotmanrc
+  if [ -f "$HOME/.dotmanrc" ]; then
+    source "$HOME/.dotmanrc"
+  else
+    log_error "No .dotmanrc found. Run 'dotman.sh init' first."
+    return 1
+  fi
+
+  log_info "Available profiles:"
+  for dir in "$PROJECT_ROOT/profiles/"*/; do
+    profile=$(basename "$dir")
+
+    # Mark active profile
+    if [ "$profile" = "$DOTMAN_PROFILE" ]; then
+      echo "  ➤ $profile (active)"
+    else
+      echo "    $profile"
+    fi
+  done
+}
 
