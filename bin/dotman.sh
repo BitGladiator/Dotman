@@ -24,6 +24,9 @@ case "$COMMAND" in
   list-profiles)
     list_profiles "$@"
     ;;
+  create-profile)
+    create_profile "$@"
+    ;;
   help|--help|-h|"")
     show_help
     ;;

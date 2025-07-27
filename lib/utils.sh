@@ -166,4 +166,27 @@ list_profiles() {
     fi
   done
 }
+# Create a new dotfiles profile
+create_profile() {
+  PROFILE_NAME="$1"
 
+  if [ -z "$PROFILE_NAME" ]; then
+    log_error "Please provide a profile name. Example: create-profile dev"
+    return 1
+  fi
+
+  PROFILE_DIR="$PROJECT_ROOT/profiles/$PROFILE_NAME"
+
+  if [ -d "$PROFILE_DIR" ]; then
+    log_error "Profile '$PROFILE_NAME' already exists."
+    return 1
+  fi
+
+  # Create the new profile directory
+  mkdir -p "$PROFILE_DIR"
+
+  # Optionally create a template dotfile
+  echo "# Add your dotfiles for $PROFILE_NAME here" > "$PROFILE_DIR/readme.txt"
+
+  log_success "Profile '$PROFILE_NAME' created at $PROFILE_DIR"
+}
