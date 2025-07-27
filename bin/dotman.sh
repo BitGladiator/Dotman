@@ -27,6 +27,9 @@ case "$COMMAND" in
   create-profile)
     create_profile "$@"
     ;;
+  delete-profile)
+    delete_profile "$@"
+    ;;
   help|--help|-h|"")
     show_help
     ;;

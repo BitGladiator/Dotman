@@ -190,3 +190,41 @@ create_profile() {
 
   log_success "Profile '$PROFILE_NAME' created at $PROFILE_DIR"
 }
+# Delete an existing dotfiles profile
+delete_profile() {
+  PROFILE_NAME="$1"
+
+  if [ -z "$PROFILE_NAME" ]; then
+    log_error "Please provide a profile name. Example: delete-profile dev"
+    return 1
+  fi
+
+  PROFILE_DIR="$PROJECT_ROOT/profiles/$PROFILE_NAME"
+
+  if [ ! -d "$PROFILE_DIR" ]; then
+    log_error "Profile '$PROFILE_NAME' does not exist."
+    return 1
+  fi
+
+  # Load active profile from config
+  if [ -f "$HOME/.dotmanrc" ]; then
+    source "$HOME/.dotmanrc"
+  fi
+
+  # Warn if trying to delete the active profile
+  if [ "$PROFILE_NAME" = "$DOTMAN_PROFILE" ]; then
+    log_error "You are trying to delete the currently active profile '$PROFILE_NAME'. Please switch profiles first."
+    return 1
+  fi
+
+  # Ask for confirmation
+  read -p "Are you sure you want to delete profile '$PROFILE_NAME'? (y/n): " CONFIRM
+  if [[ "$CONFIRM" =~ ^[Yy]$ ]]; then
+    rm -rf "$PROFILE_DIR"
+    log_success "Profile '$PROFILE_NAME' deleted."
+  else
+    log_info "Delete cancelled."
+  fi
+}
+
+
