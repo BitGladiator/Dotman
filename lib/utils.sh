@@ -226,5 +226,52 @@ delete_profile() {
     log_info "Delete cancelled."
   fi
 }
+# Show dotfile installation status
+status_dotfiles() {
+  log_info "Checking dotfiles status..."
+
+  # Load the profile from config
+  if [ -f "$HOME/.dotmanrc" ]; then
+    source "$HOME/.dotmanrc"
+  fi
+
+  DOTFILES_PATH="$PROJECT_ROOT/configs"
+
+  if [ -n "$DOTMAN_PROFILE" ] && [ "$DOTMAN_PROFILE" != "default" ]; then
+    PROFILE_PATH="$PROJECT_ROOT/profiles/$DOTMAN_PROFILE"
+    if [ -d "$PROFILE_PATH" ]; then
+      DOTFILES_PATH="$PROFILE_PATH"
+      log_info "Using profile: $DOTMAN_PROFILE"
+    else
+      log_error "Profile '$DOTMAN_PROFILE' does not exist."
+      return 1
+    fi
+  fi
+
+  # Loop through files in the active profile
+  for file in "$DOTFILES_PATH"/*; do
+    [ -f "$file" ] || continue
+
+    basefile=".$(basename "$file")"
+    target="$HOME/$basefile"
+
+    if [ -L "$target" ]; then
+      # If it's a symlink
+      link_target=$(readlink "$target")
+      if [ "$link_target" = "$file" ]; then
+        echo "SUCCESS: $basefile is correctly linked"
+      else
+        echo "WARNING: $basefile is a symlink but points elsewhere"
+      fi
+    elif [ -f "$target" ]; then
+      # Regular file exists and could be a conflict
+      echo "ERROR: $basefile exists and may conflict"
+    else
+      echo "ERROR: $basefile is missing (not installed yet)"
+    fi
+  done
+
+  log_info "Status check complete."
+}
 
 

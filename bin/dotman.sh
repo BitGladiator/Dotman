@@ -30,6 +30,9 @@ case "$COMMAND" in
   delete-profile)
     delete_profile "$@"
     ;;
+  status)
+    status_dotfiles "$@"
+    ;;
   help|--help|-h|"")
     show_help
     ;;
