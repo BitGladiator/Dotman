@@ -74,20 +74,29 @@ backup_dotfiles() {
 
   log_success "Backup complete at $BACKUP_DIR"
 }
-
-#Install Dotfiles (Symlink them to $HOME)
+# Install Dotfiles (Symlink them to $HOME)
 install_dotfiles() {
   log_info "Installing dotfiles..."
 
-  # Load the selected profile from the .dotmanrc config file
+  DRY_RUN=false
+
+  # Check for --dry-run flag in arguments
+  for arg in "$@"; do
+    if [ "$arg" = "--dry-run" ]; then
+      DRY_RUN=true
+      log_info "[DRY-RUN MODE ENABLED]"
+    fi
+  done
+
+  # Load selected profile from .dotmanrc config file
   if [ -f "$HOME/.dotmanrc" ]; then
     source "$HOME/.dotmanrc"
   fi
 
-  # Default path to configs/ if no profile is selected
+  # Default path is configs/
   DOTFILES_PATH="$PROJECT_ROOT/configs"
 
-  # If a profile is set and it's not 'default', use the profile folder
+  # If a profile is set and not default, use that folder
   if [ -n "$DOTMAN_PROFILE" ] && [ "$DOTMAN_PROFILE" != "default" ]; then
     PROFILE_PATH="$PROJECT_ROOT/profiles/$DOTMAN_PROFILE"
     if [ -d "$PROFILE_PATH" ]; then
@@ -100,28 +109,31 @@ install_dotfiles() {
 
   # Loop through all files in the active dotfiles folder
   for file in "$DOTFILES_PATH"/*; do
-    [ -f "$file" ] || continue  # Skip if not a regular file
+    [ -f "$file" ] || continue  # Skip non-regular files
 
-    # Prepend a dot to the filename to make it a hidden file (e.g. bashrc -> .bashrc)
     basefile=".$(basename "$file")"
-
-    # Full target path in user's home directory
     target="$HOME/$basefile"
 
-    # If a file or symlink already exists at the target location
+    # If target exists, prepare to back it up
     if [ -f "$target" ] || [ -L "$target" ]; then
-      # Back it up before replacing
-      backup_dotfiles "$target"
-      rm -f "$target"
+      if [ "$DRY_RUN" = true ]; then
+        log_info "[DRY-RUN] Would back up and replace $basefile"
+      else
+        backup_dotfiles "$target"
+        rm -f "$target"
+      fi
     fi
 
-    # Create a symlink from the dotfile source to $HOME
-    ln -s "$file" "$target"
-
-    log_success "Linked $basefile -> $(realpath "$file")"
+    # Create or simulate symlink
+    if [ "$DRY_RUN" = true ]; then
+      log_success "[DRY-RUN] Would link $basefile -> $(realpath "$file")"
+    else
+      ln -s "$file" "$target"
+      log_success "Linked $basefile -> $(realpath "$file")"
+    fi
   done
 
-  log_success "Dotfiles installed successfully!"
+  log_success "Dotfiles install ${DRY_RUN:+(dry-run)} complete!"
 }
 # Change the active profile
 use_profile() {
