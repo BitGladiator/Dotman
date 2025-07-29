@@ -285,5 +285,40 @@ status_dotfiles() {
 
   log_info "Status check complete."
 }
+# Remove symlinks in $HOME that were created by Dotman
+clean_dotfiles() {
+  log_info "Cleaning up dotfiles from \$HOME..."
+
+  # Load profile from config
+  if [ -f "$HOME/.dotmanrc" ]; then
+    source "$HOME/.dotmanrc"
+  fi
+
+  DOTFILES_PATH="$PROJECT_ROOT/configs"
+  if [ -n "$DOTMAN_PROFILE" ] && [ "$DOTMAN_PROFILE" != "default" ]; then
+    PROFILE_PATH="$PROJECT_ROOT/profiles/$DOTMAN_PROFILE"
+    if [ -d "$PROFILE_PATH" ]; then
+      DOTFILES_PATH="$PROFILE_PATH"
+      log_info "Using profile: $DOTMAN_PROFILE"
+    else
+      log_warn "Profile '$DOTMAN_PROFILE' not found. Falling back to configs/"
+    fi
+  fi
+
+  # Loop through files and remove symlinks in $HOME
+  for file in "$DOTFILES_PATH"/*; do
+    [ -f "$file" ] || continue
+    basefile=".$(basename "$file")"
+    target="$HOME/$basefile"
+
+    # Only remove if it's a symlink pointing to our dotfile
+    if [ -L "$target" ] && [ "$(readlink "$target")" = "$file" ]; then
+      rm "$target"
+      log_success "Removed symlink: $target"
+    fi
+  done
+
+  log_success "Clean complete!"
+}
 
 

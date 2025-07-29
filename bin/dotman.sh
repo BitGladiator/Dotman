@@ -33,6 +33,9 @@ case "$COMMAND" in
   status)
     status_dotfiles "$@"
     ;;
+  clean)
+    clean_dotfiles "$@"
+    ;;
   help|--help|-h|"")
     show_help
     ;;
