@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
+LOG_FILE="$PROJECT_ROOT/logs/dotman-$(date +'%Y-%m-%d_%H-%M-%S').log"
 # Print info messages
 log_info() {
-  echo -e "$1"
+  echo -e "[INFO] $1"
+  echo -e "[INFO] $1" >> "$LOG_FILE"
 }
 
-# Print success messages
 log_success() {
-  echo -e "$1"
+  echo -e "[SUCCESS] $1"
+  echo -e "[SUCCESS] $1" >> "$LOG_FILE"
 }
 
-# Print error messages
 log_error() {
-  echo -e "$1" >&2
+  echo -e "[ERROR] $1" >&2
+  echo -e "[ERROR] $1" >> "$LOG_FILE"
 }
 
 # Show help screen
