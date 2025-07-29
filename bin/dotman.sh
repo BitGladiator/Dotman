@@ -36,6 +36,9 @@ case "$COMMAND" in
   clean)
     clean_dotfiles "$@"
     ;;
+  version)
+    version_control "$@"
+    ;;
   help|--help|-h|"")
     show_help
     ;;

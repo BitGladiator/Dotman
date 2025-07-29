@@ -50,8 +50,6 @@ init_dotman() {
 
   log_success "Dotman initialized!"
 }
-
-# Backup existing dotfiles from $HOME
 backup_dotfiles() {
   log_info "Backing up existing dotfiles..."
 
@@ -60,9 +58,24 @@ backup_dotfiles() {
   BACKUP_DIR="$PROJECT_ROOT/backup/$TIMESTAMP"
   mkdir -p "$BACKUP_DIR"
 
+  # Load ignore patterns from .dotmanignore (if exists)
+  IGNORE_FILE="$PROJECT_ROOT/.dotmanignore"
+  IGNORED_FILES=()
+  if [ -f "$IGNORE_FILE" ]; then
+    mapfile -t IGNORED_FILES < "$IGNORE_FILE"
+  fi
+
   # Loop through each file in configs/
   for file in "$PROJECT_ROOT/configs/"*; do
-    basefile=".$(basename "$file")"
+    filename="$(basename "$file")"
+
+    # Skip ignored files
+    if [[ " ${IGNORED_FILES[@]} " =~ " $filename " ]]; then
+      log_info "Skipping ignored file: $filename"
+      continue
+    fi
+
+    basefile=".$filename"
     target="$HOME/$basefile"
 
     # If the file already exists in home, copy it to backup
@@ -110,7 +123,11 @@ install_dotfiles() {
   # Loop through all files in the active dotfiles folder
   for file in "$DOTFILES_PATH"/*; do
     [ -f "$file" ] || continue  # Skip non-regular files
-
+    # Skip ignored files
+    if is_ignored "$(basename "$file")"; then
+      log_info "Skipping ignored file: $(basename "$file")"
+      continue
+    fi
     basefile=".$(basename "$file")"
     target="$HOME/$basefile"
 
@@ -308,6 +325,11 @@ clean_dotfiles() {
   # Loop through files and remove symlinks in $HOME
   for file in "$DOTFILES_PATH"/*; do
     [ -f "$file" ] || continue
+    # Skip ignored files
+    if is_ignored "$(basename "$file")"; then
+      log_info "Skipping ignored file: $(basename "$file")"
+      continue
+    fi
     basefile=".$(basename "$file")"
     target="$HOME/$basefile"
 
@@ -320,5 +342,70 @@ clean_dotfiles() {
 
   log_success "Clean complete!"
 }
+# Check if a file is ignored based on .dotmanignore
+is_ignored() {
+  local file_name="$1"
+  local ignore_file="$DOTFILES_PATH/.dotmanignore"
 
+  if [ ! -f "$ignore_file" ]; then
+    return 1  # No ignore file → nothing ignored
+  fi
+
+  # Check each line in .dotmanignore
+  while IFS= read -r pattern || [ -n "$pattern" ]; do
+    [[ -z "$pattern" || "$pattern" =~ ^# ]] && continue  # skip empty or comment lines
+    if [[ "$file_name" == $pattern || "$file_name" == $(basename "$pattern") ]]; then
+      return 0  # ignored
+    fi
+  done < "$ignore_file"
+
+  return 1
+}
+version_control() {
+  ACTION="$1"
+  shift
+
+  # Load active profile
+  if [ -f "$HOME/.dotmanrc" ]; then
+    source "$HOME/.dotmanrc"
+  fi
+
+  DOTFILES_PATH="$PROJECT_ROOT/configs"
+
+  if [ -n "$DOTMAN_PROFILE" ] && [ "$DOTMAN_PROFILE" != "default" ]; then
+    PROFILE_PATH="$PROJECT_ROOT/profiles/$DOTMAN_PROFILE"
+    [ -d "$PROFILE_PATH" ] && DOTFILES_PATH="$PROFILE_PATH"
+  fi
+
+  case "$ACTION" in
+    sync)
+      COMMIT_MSG="$*"
+      [ -z "$COMMIT_MSG" ] && COMMIT_MSG="update dotfiles"
+
+      # 1. Init git repo if not present
+      if [ ! -d "$DOTFILES_PATH/.git" ]; then
+        git -C "$DOTFILES_PATH" init
+        log_info "Initialized Git repository in $DOTFILES_PATH"
+      fi
+
+      # 2. Add remote if not already present
+      if ! git -C "$DOTFILES_PATH" remote | grep -q origin; then
+        echo -n "Enter remote Git repo URL: "
+        read REMOTE_URL
+        git -C "$DOTFILES_PATH" remote add origin "$REMOTE_URL"
+        log_info "Added remote origin -> $REMOTE_URL"
+      fi
+
+      # 3. Stage, commit, push
+      git -C "$DOTFILES_PATH" add .
+      git -C "$DOTFILES_PATH" commit -m "$COMMIT_MSG" || log_info "Nothing to commit."
+      git -C "$DOTFILES_PATH" push -u origin main 2>/dev/null || git -C "$DOTFILES_PATH" push -u origin master
+
+      log_success "Dotfiles synced to remote."
+      ;;
+    *)
+      log_error "Unknown version control action: $ACTION"
+      ;;
+  esac
+}
 
